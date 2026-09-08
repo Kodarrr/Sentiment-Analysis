@@ -16,3 +16,9 @@ export interface PaginatedFeedback {
   page: number;
   page_size: number;
 }
+
+export interface SentimentTrendPoint {
+  date: string;
+  positive_count: number;
+  negative_count: number;
+}

@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useFeedbackList } from "@/lib/useFeedbackList";
+import { useSentimentTrend } from "@/lib/useSentimentTrend";
 import { FeedbackTable } from "@/components/FeedbackTable";
 import { Pagination } from "@/components/Pagination";
+import { SentimentTrendChart } from "@/components/SentimentTrendChart";
 
 const PAGE_SIZE = 20;
 
@@ -25,6 +27,7 @@ export default function DashboardPage() {
     error,
     isLoading: isFeedbackLoading,
   } = useFeedbackList({ token, page, pageSize: PAGE_SIZE });
+  const { data: trend, error: trendError } = useSentimentTrend(token);
 
   if (isAuthLoading || !token) {
     return (
@@ -47,11 +50,18 @@ export default function DashboardPage() {
       </header>
 
       <div className="flex-1 space-y-4 p-6">
-        {error && (
+        {(error || trendError) && (
           <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-            {error}
+            {error ?? trendError}
           </p>
         )}
+
+        <div className="rounded-lg border border-black/10 dark:border-white/10">
+          <h2 className="border-b border-black/10 px-4 py-2 text-sm font-medium dark:border-white/10">
+            Sentiment trend
+          </h2>
+          <SentimentTrendChart data={trend ?? []} />
+        </div>
 
         {isFeedbackLoading && !data ? (
           <p className="text-sm text-black/60 dark:text-white/60">Loading feedback...</p>
