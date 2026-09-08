@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, Response, status
+from fastapi import APIRouter, Depends, Header, Request, Response, status
 from rq import Queue
 from rq.job import Callback
 from sqlalchemy.orm import Session
@@ -8,13 +8,16 @@ from sqlalchemy.orm import Session
 from backend.common.db import get_db
 from backend.common.models import Feedback
 from backend.common.queue import get_queue, get_retry_policy
+from backend.common.rate_limit import feedback_rate_limit, limiter
 from backend.common.schemas import FeedbackCreate, FeedbackResponse
 
 router = APIRouter(prefix="/api/v1", tags=["feedback"])
 
 
 @router.post("/feedback", response_model=FeedbackResponse)
+@limiter.limit(feedback_rate_limit)
 def submit_feedback(
+    request: Request,
     payload: FeedbackCreate,
     response: Response,
     db: Annotated[Session, Depends(get_db)],
