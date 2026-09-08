@@ -4,7 +4,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from backend.api.middleware import CorrelationIdMiddleware
-from backend.api.routers import feedback, health
+from backend.api.routers import auth, feedback, health
 from backend.common.config import get_settings
 from backend.common.logging import configure_logging
 from backend.common.rate_limit import limiter
@@ -22,3 +22,4 @@ app.add_middleware(CorrelationIdMiddleware)
 
 app.include_router(health.router)
 app.include_router(feedback.router)
+app.include_router(auth.router)
