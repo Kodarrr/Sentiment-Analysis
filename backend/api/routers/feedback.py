@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Request, Response, status
@@ -10,6 +11,8 @@ from backend.common.models import Feedback
 from backend.common.queue import get_queue, get_retry_policy
 from backend.common.rate_limit import feedback_rate_limit, limiter
 from backend.common.schemas import FeedbackCreate, FeedbackResponse
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["feedback"])
 
@@ -29,6 +32,10 @@ def submit_feedback(
             db.query(Feedback).filter(Feedback.idempotency_key == idempotency_key).first()
         )
         if existing is not None:
+            logger.info(
+                "idempotent feedback replay",
+                extra={"feedback_id": str(existing.id), "idempotency_key": idempotency_key},
+            )
             response.status_code = status.HTTP_200_OK
             return existing
 
@@ -47,6 +54,11 @@ def submit_feedback(
         str(feedback.id),
         retry=get_retry_policy(),
         on_failure=Callback("backend.worker.tasks.handle_job_failure"),
+    )
+
+    logger.info(
+        "feedback submitted",
+        extra={"feedback_id": str(feedback.id), "user_id": feedback.user_id},
     )
 
     response.status_code = status.HTTP_201_CREATED

@@ -2,6 +2,7 @@ import uuid
 
 import pytest
 
+from backend.common.logging import correlation_id_var
 from backend.common.models import Feedback
 from backend.worker import tasks
 
@@ -48,6 +49,28 @@ def test_process_feedback_positive_case(db_session, monkeypatch, fake_slack_aler
     updated = db_session.get(Feedback, feedback_id)
     assert updated.status == "processed"
     assert updated.sentiment_label == "POSITIVE"
+
+
+def test_process_feedback_sets_correlation_id_to_feedback_id_during_processing(
+    db_session, monkeypatch, fake_slack_alert
+):
+    seen = {}
+
+    def fake_analyze_sentiment(text):
+        seen["cid"] = correlation_id_var.get()
+        return "POSITIVE", 0.9
+
+    monkeypatch.setattr(tasks, "analyze_sentiment", fake_analyze_sentiment)
+    feedback = Feedback(user_id="u1", text="ok", status="pending")
+    db_session.add(feedback)
+    db_session.commit()
+    feedback_id = str(feedback.id)
+
+    assert correlation_id_var.get() is None
+    tasks.process_feedback(feedback_id)
+
+    assert seen["cid"] == feedback_id
+    assert correlation_id_var.get() is None
 
 
 def test_process_feedback_sends_slack_alert_for_negative_above_threshold(
