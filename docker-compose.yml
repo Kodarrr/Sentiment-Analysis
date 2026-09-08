@@ -28,8 +28,8 @@ services:
 
   api:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.api
+      context: .
+      dockerfile: backend/Dockerfile.api
     env_file: .env
     ports:
       - "${API_PORT:-8000}:8000"
@@ -39,12 +39,12 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./backend:/app
+      - ./backend:/app/backend
 
   ml-worker:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.worker
+      context: .
+      dockerfile: backend/Dockerfile.worker
     env_file: .env
     depends_on:
       postgres:
@@ -52,7 +52,7 @@ services:
       redis:
         condition: service_healthy
     volumes:
-      - ./backend:/app
+      - ./backend:/app/backend
 
   frontend:
     build:
