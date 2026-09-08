@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
 
+from backend.common.config import get_settings
 from backend.common.db import SessionLocal
 from backend.common.models import Feedback
 from backend.worker.sentiment import analyze_sentiment
+from backend.worker.slack import send_negative_feedback_alert
 
 
 def process_feedback(feedback_id: str) -> None:
@@ -19,6 +21,10 @@ def process_feedback(feedback_id: str) -> None:
         feedback.status = "processed"
         feedback.processed_at = datetime.now(timezone.utc)
         db.commit()
+
+        threshold = get_settings().sentiment_negative_threshold
+        if label == "NEGATIVE" and score >= threshold:
+            send_negative_feedback_alert(feedback_id, feedback.user_id, feedback.text, score)
     finally:
         db.close()
 
