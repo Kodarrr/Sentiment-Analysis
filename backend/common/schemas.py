@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -21,6 +21,19 @@ class FeedbackResponse(BaseModel):
     retry_count: int
     created_at: datetime
     processed_at: datetime | None
+
+
+class PaginatedFeedbackResponse(BaseModel):
+    items: list[FeedbackResponse]
+    total: int
+    page: int
+    page_size: int
+
+
+class SentimentTrendPoint(BaseModel):
+    date: date
+    positive_count: int
+    negative_count: int
 
 
 class AdminUserCreate(BaseModel):
