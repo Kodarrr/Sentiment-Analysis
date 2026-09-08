@@ -22,7 +22,7 @@ def flush_test_redis():
     redis_lib.from_url(TEST_REDIS_URL).flushdb()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 def engine():
     engine = create_engine(TEST_DATABASE_URL)
     Base.metadata.create_all(engine)
