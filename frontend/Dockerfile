@@ -16,6 +16,11 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+# Without this, Docker auto-populates HOSTNAME with the container ID, and the
+# standalone server tries to getaddrinfo() that as a bind address and crashes
+# (EAI_AGAIN). Setting it explicitly here is what makes it bind to all interfaces.
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./

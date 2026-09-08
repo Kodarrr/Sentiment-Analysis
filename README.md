@@ -119,6 +119,11 @@ All variables are documented in [`.env.example`](.env.example). Notable ones:
   `POST /api/v1/feedback`.
 - `CORS_ALLOWED_ORIGINS` — comma-separated list of origins allowed to call
   the API from a browser (the dashboard's origin).
+- `FRONTEND_PORT` — host port the dashboard is published on (default
+  `3000`). If you change this because something else on your machine
+  already uses 3000, **also update `CORS_ALLOWED_ORIGINS`** to match — the
+  dashboard's own requests to the API get blocked by CORS otherwise, since
+  `.env` values aren't cross-referenced.
 - `JWT_SECRET_KEY` — **change this** if you deploy anywhere beyond your own
   machine.
 
