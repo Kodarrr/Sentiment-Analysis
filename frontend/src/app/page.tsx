@@ -8,13 +8,16 @@ import { useSentimentTrend } from "@/lib/useSentimentTrend";
 import { FeedbackTable } from "@/components/FeedbackTable";
 import { Pagination } from "@/components/Pagination";
 import { SentimentTrendChart } from "@/components/SentimentTrendChart";
+import { Filters, type FiltersValue } from "@/components/Filters";
 
 const PAGE_SIZE = 20;
+const EMPTY_FILTERS: FiltersValue = { sentiment: "", startDate: "", endDate: "" };
 
 export default function DashboardPage() {
   const { token, isLoading: isAuthLoading, logout } = useAuth();
   const router = useRouter();
   const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState<FiltersValue>(EMPTY_FILTERS);
 
   useEffect(() => {
     if (!isAuthLoading && !token) {
@@ -26,8 +29,24 @@ export default function DashboardPage() {
     data,
     error,
     isLoading: isFeedbackLoading,
-  } = useFeedbackList({ token, page, pageSize: PAGE_SIZE });
-  const { data: trend, error: trendError } = useSentimentTrend(token);
+  } = useFeedbackList({
+    token,
+    page,
+    pageSize: PAGE_SIZE,
+    sentiment: filters.sentiment || undefined,
+    startDate: filters.startDate || undefined,
+    endDate: filters.endDate || undefined,
+  });
+  const { data: trend, error: trendError } = useSentimentTrend({
+    token,
+    startDate: filters.startDate || undefined,
+    endDate: filters.endDate || undefined,
+  });
+
+  function handleFiltersChange(next: FiltersValue) {
+    setFilters(next);
+    setPage(1);
+  }
 
   if (isAuthLoading || !token) {
     return (
@@ -55,6 +74,8 @@ export default function DashboardPage() {
             {error ?? trendError}
           </p>
         )}
+
+        <Filters value={filters} onChange={handleFiltersChange} />
 
         <div className="rounded-lg border border-black/10 dark:border-white/10">
           <h2 className="border-b border-black/10 px-4 py-2 text-sm font-medium dark:border-white/10">
