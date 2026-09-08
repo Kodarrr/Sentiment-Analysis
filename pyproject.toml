@@ -4,7 +4,7 @@ pythonpath = ["."]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py310"
 exclude = ["frontend", "backend/alembic/versions"]
 
 [tool.ruff.lint]
