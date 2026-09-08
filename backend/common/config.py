@@ -21,12 +21,18 @@ class Settings(BaseSettings):
 
     rate_limit_per_minute: int = 30
 
+    cors_allowed_origins: str = "http://localhost:3000"
+
     sentiment_negative_threshold: float = 0.85
     model_name: str = "distilbert-base-uncased-finetuned-sst-2-english"
     max_retries: int = 3
     retry_backoff_base_seconds: int = 10
 
     slack_webhook_url: str = ""
+
+    @property
+    def cors_allowed_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
 
 
 @lru_cache
