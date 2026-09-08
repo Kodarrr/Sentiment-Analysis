@@ -21,3 +21,26 @@ def process_feedback(feedback_id: str) -> None:
         db.commit()
     finally:
         db.close()
+
+
+def handle_job_failure(job, connection, exc_type, exc_value, exc_traceback) -> None:
+    """RQ failure callback: fires on every failed attempt.
+
+    job.retries_left reflects the count *before* this attempt's retry is
+    consumed, so 0 (or None, if no Retry was configured) means this was the
+    last allowed attempt and the job is about to land in the queue's
+    FailedJobRegistry - our dead-letter queue.
+    """
+    feedback_id = job.args[0]
+    db = SessionLocal()
+    try:
+        feedback = db.get(Feedback, feedback_id)
+        if feedback is None:
+            return
+
+        feedback.retry_count += 1
+        if not job.retries_left:
+            feedback.status = "failed"
+        db.commit()
+    finally:
+        db.close()

@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     sentiment_negative_threshold: float = 0.85
     model_name: str = "distilbert-base-uncased-finetuned-sst-2-english"
     max_retries: int = 3
+    retry_backoff_base_seconds: int = 10
 
     slack_webhook_url: str = ""
 

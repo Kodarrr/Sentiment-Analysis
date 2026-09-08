@@ -44,9 +44,11 @@ def test_submit_feedback_creates_pending_record(client, fake_queue):
     assert body["retry_count"] == 0
 
     assert len(fake_queue.enqueued) == 1
-    func, args, _ = fake_queue.enqueued[0]
+    func, args, kwargs = fake_queue.enqueued[0]
     assert func == "backend.worker.tasks.process_feedback"
     assert args == (body["id"],)
+    assert kwargs["retry"].max == 3
+    assert kwargs["on_failure"].func == "backend.worker.tasks.handle_job_failure"
 
 
 def test_submit_feedback_rejects_empty_text(client):
