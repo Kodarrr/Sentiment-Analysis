@@ -6,9 +6,10 @@ COPY backend/requirements-common.txt backend/requirements-api.txt backend/
 RUN pip install --no-cache-dir -r backend/requirements-api.txt
 
 COPY backend/ backend/
+RUN chmod +x backend/entrypoint-api.sh
 
 ENV PYTHONPATH=/app
 
 EXPOSE 8000
 
-CMD ["uvicorn", "backend.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["backend/entrypoint-api.sh"]
