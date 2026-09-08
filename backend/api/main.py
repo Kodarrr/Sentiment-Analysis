@@ -31,3 +31,12 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(feedback.router)
 app.include_router(auth.router)
+
+
+@app.get("/")
+def root() -> dict:
+    return {
+        "name": settings.app_name,
+        "docs": "/docs",
+        "health": "/health",
+    }
