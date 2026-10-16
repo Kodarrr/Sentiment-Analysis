@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 analyze_sentiment = original_analyze_sentiment
 
 
-def process_feedback(feedback_id: str) -> None:
+def process_feedback(feedback_id: str, model_override: str | None = None) -> None:
     token = correlation_id_var.set(feedback_id)
     db = SessionLocal()
     try:
@@ -46,7 +46,20 @@ def process_feedback(feedback_id: str) -> None:
                 negative_polarity_score=score if polarity == "negative" else 0.0,
             )
         else:
-            result = analyze_sentiment_full(feedback.text)
+            try:
+                result = analyze_sentiment_full(feedback.text, engine_override=model_override)
+            except Exception as exc:
+                logger.error(
+                    "Selected model failed (engine=%s): %s. Falling back to DistilBERT.",
+                    model_override,
+                    exc,
+                    extra={"feedback_id": feedback_id},
+                )
+                try:
+                    result = analyze_sentiment_full(feedback.text, engine_override="distilbert")
+                    result.model_id = f"{result.model_id} (fallback)"
+                except Exception:
+                    raise exc
 
         feedback.sentiment_label = result.label
         feedback.sentiment_score = result.score

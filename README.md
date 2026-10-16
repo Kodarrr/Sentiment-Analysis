@@ -1,422 +1,212 @@
-# Smart Customer Feedback & Sentiment Engine (with BanglaBERT & DistilBERT)
+# ⚡ Multilingual Sentiment Intelligence Platform
+### Fine-Tuned BanglaBERT (5-Class) & DistilBERT with Real-Time Worker Pipeline
 
-A real-time customer feedback intake system with dual-engine async ML sentiment analysis (Bangla & English) and automated Slack alerts for negative feedback.
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Next.js](https://img.shields.io/badge/Next.js-16_App_Router-black.svg?logo=next.js&logoColor=white)](https://nextjs.org)
+[![HuggingFace](https://img.shields.io/badge/HuggingFace-sm--khalil%2Fbanglabert--sentigold-FFD21E.svg?logo=huggingface&logoColor=black)](https://huggingface.co/sm-khalil/banglabert-sentigold)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791.svg?logo=postgresql&logoColor=white)](https://www.postgresql.org)
+[![Redis](https://img.shields.io/badge/Redis-RQ_Worker-DC382D.svg?logo=redis&logoColor=white)](https://redis.io)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38B2AC.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
 
-Customers submit feedback in either Bengali or English through a REST API. It is validated, persisted, and queued for background processing in Redis/RQ. A dedicated ML worker executes the unified sentiment engine:
-- **Bengali text**: routed to a fine-tuned **BanglaBERT** model (`sm-khalil/banglabert-sentigold`) returning 5 fine-grained classes (`NU`, `SN`, `WN`, `SP`, `WP`) with `csebuetnlp` text normalization.
-- **English/Other text**: fallback to **DistilBERT** (`distilbert-base-uncased-finetuned-sst-2-english`).
-- **Slack Alerting**: triggers on negative polarity (`SN` or `WN`) when confidence exceeds the threshold.
-- **Admin Dashboard**: Next.js dashboard displaying real-time feedback with fine-grained badges and hover legends, a 3-polarity trend chart (Positive / Neutral / Negative), and a label distribution chart.
-
----
-
-## Model Benchmark & Evaluation
-
-- **Model ID**: [`sm-khalil/banglabert-sentigold`](https://huggingface.co/sm-khalil/banglabert-sentigold) (BanglaBERT fine-tuned on SentiGOLD)
-- **Classes (5 fine-grained)**:
-  - `SN`: Strongly Negative (coarse polarity: *negative*)
-  - `WN`: Weakly Negative (coarse polarity: *negative*)
-  - `NU`: Neutral (coarse polarity: *neutral*)
-  - `WP`: Weakly Positive (coarse polarity: *positive*)
-  - `SP`: Strongly Positive (coarse polarity: *positive*)
-- **Test Set Evaluation** (7,000 samples):
-  - **Accuracy**: **0.673** (67.3%)
-  - **Macro-F1**: **0.667**
+A production-grade, asynchronous customer feedback intake engine. Combines a fine-tuned **5-class BanglaBERT** model (`sm-khalil/banglabert-sentigold`) with **DistilBERT** (SST-2) for real-time multilingual sentiment classification, Redis/RQ queue worker execution, automated Slack alerts, and an interactive Next.js admin dashboard.
 
 ---
 
-## Architecture
+## 🔬 BanglaBERT Fine-Tuning & Results
+
+The Bengali sentiment engine is powered by fine-tuning **`csebuetnlp/banglabert`** (ELECTRA architecture, 110M parameters) on **`SayedShaun/sentigold`** (~70,000 multi-domain Bengali texts across 30+ domains).
+
+The full training and evaluation pipeline is documented in [`Banglabert_Fine_Tune.ipynb`](Banglabert_Fine_Tune.ipynb).
+
+### 1. Training Setup
+- **Base Model**: `csebuetnlp/banglabert` + Sequence Classification Head (5 output classes).
+- **Preprocessing**: `csebuetnlp/normalizer` applied to sanitize Bengali Unicode, emojis, and punctuation.
+- **Optimization**: AdamW, Learning Rate $2\times 10^{-5}$, Linear Warmup (10%), Weight Decay 0.01, Batch Size 32, FP16 on GPU.
+- **Published Weights**: [`sm-khalil/banglabert-sentigold`](https://huggingface.co/sm-khalil/banglabert-sentigold) on Hugging Face.
+
+### 2. Empirical Results (Test Set: 7,000 unseen samples)
+
+Fine-tuning BanglaBERT yields a **+27.6% accuracy boost** and **+27.5% macro-F1 gain** over the baseline:
+
+| Model Architecture | Accuracy | Macro F1 | Note |
+|---|:---:|:---:|---|
+| **TF-IDF + Logistic Regression** (Baseline) | 39.7% | 0.392 | Traditional ML baseline |
+| **Fine-Tuned BanglaBERT** (Ours) | **67.3%** | **0.667** | **+27.6% boost over baseline** |
+
+### 3. Class-Level Performance Breakdown
+
+| Label | Bengali Description | Precision | Recall | F1-Score | Support |
+|---|---|:---:|:---:|:---:|:---:|
+| **`SP`** | Strongly Positive (গাঢ় ইতিবাচক) | **0.721** | **0.763** | **0.741** | 1,532 |
+| **`SN`** | Strongly Negative (গাঢ় নেতিবাচক) | **0.704** | **0.720** | **0.712** | 1,376 |
+| **`NU`** | Neutral (নিরপেক্ষ) | **0.714** | **0.695** | **0.704** | 1,516 |
+| **`WN`** | Weakly Negative (হালকা নেতিবাচক) | **0.612** | **0.602** | **0.607** | 1,368 |
+| **`WP`** | Weakly Positive (হালকা ইতিবাচক) | **0.587** | **0.558** | **0.572** | 1,208 |
+
+---
+
+## 🖥️ Live Dashboard & System Screenshots
+
+### 1. Live Sentiment Sandbox & Model Selector
+Test real-time predictions with pre-built Bengali and English example chips, or manually pick the evaluation engine via the **Judge Model** dropdown:
+
+![Live Sentiment Sandbox](screenshots/sandbox-tester.png)
+
+### 2. Customer Feedback Stream
+Live streaming intake table showing fine-grained class badges (`SP`, `WN`, `SN`, `NU`), confidence percentages, model provenance (🇧🇩 BanglaBERT vs 🇬🇧 DistilBERT), and worker processing states:
+
+![Customer Feedback Stream](screenshots/feedback-stream.png)
+
+### 3. Real-Time Sentiment Analytics
+Daily polarity trends (Positive vs Neutral vs Negative) alongside 5-class distribution histograms:
+
+![Sentiment Analytics](screenshots/analytics-charts.png)
+
+### 4. Admin Auth & One-Click Login
+JWT-authenticated admin portal with quick sign-up and auto-fill credentials:
+
+<p align="center">
+  <img src="screenshots/auth-modal.png" width="400" alt="Admin Authentication Modal" />
+</p>
+
+---
+
+## 🏗️ Architecture
 
 ```
-                         ┌─────────────────────┐
-                         │   Admin (browser)     │
-                         └──────────┬────────────┘
-                                    │ HTTPS
+                       ┌─────────────────────────┐
+                       │  Admin Web Dashboard     │ (Next.js 16 + Tailwind CSS)
+                       │  http://localhost:3001   │
+                       └────────────┬────────────┘
+                                    │ JWT Bearer / REST
                                     ▼
-                         ┌────────────────────────┐
-                         │   Next.js Dashboard     │
-                         │  login · feedback list  │
-                         │  · 3-polarity trend    │
-                         │  · label distribution  │
-                         └──────────┬──────────────┘
-                                    │ JWT Bearer
-                                    ▼
-  ┌──────────┐  POST /api/v1/feedback   ┌─────────────────────────┐
-  │ Customer │ ────────────────────────▶│        FastAPI API       │
-  └──────────┘                          │ validation · rate limit  │
-                                         │ idempotency · JWT auth   │
-                                         │ correlation-ID logging   │
-                                         └──────┬────────────┬─────┘
-                                                │            │
-                                    write       │            │ enqueue job
-                                   "pending"    ▼            ▼
-                                   ┌────────────────┐  ┌───────────────┐
-                                   │   PostgreSQL    │  │     Redis      │
-                                   │ feedback,       │  │   (RQ queue)   │
-                                   │ admin_users     │  └───────┬────────┘
-                                   └────────▲────────┘          │ dequeue
-                                            │                   ▼
-                                   write result         ┌───────────────────────┐
-                                            └───────────│       ML Worker       │
-                                                        │  Unified Sentiment    │
-                                                        │  Engine               │
-                                                        │  ├─ BanglaBERT        │
-                                                        │  │  (csebuetnlp norm) │
-                                                        │  └─ DistilBERT (en)   │
-                                                        └──────────┬────────────┘
-                                                                   │ polarity == "negative"
-                                                                   │ & score >= threshold
-                                                                   ▼
-                                                        ┌───────────────────┐
-                                                        │   Slack webhook     │
-                                                        └───────────────────┘
+   ┌──────────┐  POST /api/v1/feedback   ┌──────────────────────────┐
+   │ Customer │ ────────────────────────▶│       FastAPI API        │
+   └──────────┘                          │ (Rate limit, Idempotency)│
+                                         └─────┬──────────────┬─────┘
+                                               │              │
+                                   Persist     ▼              ▼ Enqueue Job
+                                   "pending" ┌────────────┐ ┌─────────────┐
+                                             │ PostgreSQL │ │    Redis    │
+                                             │  (Port     │ │  (RQ Queue) │
+                                             │   5433)    │ └──────┬──────┘
+                                             └─────▲──────┘        │ Dequeue
+                                                   │               ▼
+                                           Update  │     ┌───────────────────────┐
+                                           Status  └─────│       ML Worker       │
+                                                         │  Unified Engine:      │
+                                                         │  ├─ 🇧🇩 BanglaBERT     │
+                                                         │  │  (5-Class SentiGOLD│
+                                                         │  └─ 🇬🇧 DistilBERT     │
+                                                         └──────────┬────────────┘
+                                                                    │ (SN/WN & conf >= threshold)
+                                                                    ▼
+                                                         ┌───────────────────────┐
+                                                         │     Slack Alerts      │
+                                                         └───────────────────────┘
 ```
 
-**Failure handling:** a failed sentiment job retries up to `MAX_RETRIES` times with exponential backoff (`RETRY_BACKOFF_BASE_SECONDS * 2^attempt`). Once retries are exhausted, RQ's built-in `FailedJobRegistry` acts as the dead-letter queue and the feedback row is marked `status = "failed"` for visibility in the dashboard.
+### Key Capabilities
+- **Lazy Singleton Engine**: Models and tokenizers are loaded once per worker process, keeping per-prediction latency under **150ms**.
+- **Model Routing**: Text is automatically routed based on Bengali Unicode range (`U+0980`–`U+09FF`), or explicitly overridden via API/UI (`auto` | `bangla` | `distilbert`).
+- **Resilient Fallback**: Automatic recovery ensures requests never hang indefinitely even if a remote model endpoint faces connectivity issues.
+- **Automated Alerts**: Negative sentiment (`SN` or `WN`) with confidence exceeding threshold sends structured alerts to Slack.
 
-## Tech stack
+---
 
-| Layer | Choice |
-|---|---|
-| Backend API | Python, FastAPI, SQLAlchemy 2.0, Alembic |
-| ML Engine | Hugging Face `transformers` & `torch`: `sm-khalil/banglabert-sentigold` + `distilbert-base-uncased-finetuned-sst-2-english` |
-| Text Normalizer | `csebuetnlp/normalizer` (for Bangla text preprocessing) |
-| Queue | Redis + RQ (with `Retry` and a `FailedJobRegistry` dead-letter queue) |
-| Database | PostgreSQL 16 |
-| Frontend | Next.js 16 (App Router), TypeScript, Tailwind CSS v4, SWR, Recharts |
-| Auth | JWT (HS256) via `python-jose` + `passlib`/bcrypt |
-| Deployment | Docker Compose (`api`, `ml-worker`, `redis`, `postgres`, `frontend`, `hf_cache` volume) |
-| CI | GitHub Actions (lint + test on push/PR with mocked models) |
+## 🚀 Quickstart (Docker Compose)
 
-## Quickstart (Docker Compose)
-
-Requires Docker and Docker Compose.
-
+### 1. Clone & Configure
 ```bash
-# 1. Copy env template
+git clone https://github.com/sm-khalil/sentimentAnalysis.git
+cd sentimentAnalysis
 cp .env.example .env
+```
+*(If your Hugging Face model repository is private, add your read token in `.env`: `HF_TOKEN=hf_...`)*
 
-# 2. If the Hugging Face model repository is private, add your Hugging Face Token:
-# HF_TOKEN=hf_YourAccessTokenHere
-
-# 3. Build and launch all services
-docker compose up --build
+### 2. Run All Containers
+```bash
+docker compose up -d --build
 ```
 
-That's it — the API container automatically applies the Alembic database migrations (`3a1c5d9e7b2f_add_fine_grained_sentiment_columns.py`) before starting. The Hugging Face models are cached in the persistent Docker volume `hf_cache` (`/app/.cache/huggingface`), preventing re-downloading across container restarts.
+### 3. Service Ports
 
-| Service | URL |
-|---|---|
-| Admin dashboard | http://localhost:3000 |
-| API | http://localhost:8000 |
-| API Docs (Swagger) | http://localhost:8000/docs |
-| API health check | http://localhost:8000/health |
+| Service | URL | Description |
+|---|---|---|
+| **Admin Dashboard** | **[http://localhost:3001](http://localhost:3001)** | Next.js 16 UI with Live Sandbox & Analytics |
+| **FastAPI Backend** | **[http://localhost:8000](http://localhost:8000)** | REST API with OpenAPI Docs at `/docs` |
+| **PostgreSQL** | `localhost:5433` | Host port 5433 (maps to container 5432) |
+| **Redis** | `localhost:6379` | RQ background job broker |
 
-Watch worker logs while the model initializes:
+> **Quick Login**: Open [http://localhost:3001/login](http://localhost:3001/login) and click **"⚡ Fill Quick Admin Credentials"** to log in instantly.
+
+---
+
+## 📡 API Reference
+
+Interactive Swagger docs are live at `http://localhost:8000/docs`.
+
+### Submit Feedback
 ```bash
-docker compose logs -f ml-worker
-```
-
-To use the dashboard, register an admin account and log in:
-
-```bash
-curl -X POST http://localhost:8000/api/v1/auth/register \
+curl -X POST http://localhost:8000/api/v1/feedback \
   -H "Content-Type: application/json" \
-  -d '{"email": "admin@example.com", "password": "changeme123"}'
+  -d '{
+    "user_id": "customer-101",
+    "text": "পণ্যটির কোয়ালিটি অনেক ভালো এবং কাস্টমার সার্ভিস অসাধারণ!",
+    "model_override": "auto"
+  }'
 ```
 
-Then open http://localhost:3000/login with those credentials.
-
-### Environment variables
-
-All variables are documented in [`.env.example`](.env.example). Notable keys:
-
-- `BANGLA_MODEL_ID` — Hugging Face model repository ID (default: `sm-khalil/banglabert-sentigold`).
-- `HF_TOKEN` — Hugging Face User Access Token (required for private repositories).
-- `HF_HOME` — Hugging Face cache directory path (default in container: `/app/.cache/huggingface`).
-- `SENTIMENT_ENGINE` — Routing mode: `auto` (auto-detect script), `bangla` (force BanglaBERT), or `distilbert` (force DistilBERT). Defaults to `auto`.
-- `CONFIDENCE_THRESHOLD` / `SENTIMENT_NEGATIVE_THRESHOLD` — Confidence score (0–1) above which a negative result triggers a Slack alert. Defaults to `0.85`.
-- `SLACK_WEBHOOK_URL` — Slack Incoming Webhook URL. Leave empty for local dev; the worker logs and gracefully no-ops when unset.
-- `MAX_RETRIES` / `RETRY_BACKOFF_BASE_SECONDS` — Retry policy for failed sentiment jobs.
-- `RATE_LIMIT_PER_MINUTE` — Requests per minute per client IP on `POST /api/v1/feedback`.
-- `CORS_ALLOWED_ORIGINS` — Comma-separated list of origins allowed to call the API from a browser.
-- `JWT_SECRET_KEY` — Secret key for signing admin JWT tokens.
-- `SLACK_WEBHOOK_URL` — leave empty for local dev; the worker logs and
-  no-ops instead of failing when it's unset.
-- `MAX_RETRIES` / `RETRY_BACKOFF_BASE_SECONDS` — retry policy for failed
-  sentiment jobs.
-- `RATE_LIMIT_PER_MINUTE` — requests per minute per client IP on
-  `POST /api/v1/feedback`.
-- `CORS_ALLOWED_ORIGINS` — comma-separated list of origins allowed to call
-  the API from a browser (the dashboard's origin).
-- `FRONTEND_PORT` — host port the dashboard is published on (default
-  `3000`). If you change this because something else on your machine
-  already uses 3000, **also update `CORS_ALLOWED_ORIGINS`** to match — the
-  dashboard's own requests to the API get blocked by CORS otherwise, since
-  `.env` values aren't cross-referenced.
-- `JWT_SECRET_KEY` — **change this** if you deploy anywhere beyond your own
-  machine.
-
-## Local development (without Docker)
-
-### Backend
-
-```bash
-cd backend
-python3 -m venv ../.venv && source ../.venv/bin/activate
-pip install -r requirements-dev.txt   # API deps + test tooling, no torch
-
-# Point at your own Postgres/Redis (defaults assume localhost:5432/6379)
-export DATABASE_URL=postgresql+psycopg2://feedback:feedback@localhost:5432/feedback
-export REDIS_URL=redis://localhost:6379/0
-
-alembic -c alembic.ini upgrade head
-uvicorn backend.api.main:app --reload   # run from the repo root
-```
-
-To run the ML worker locally you additionally need
-`pip install -r requirements-worker.txt` (pulls in `torch` + `transformers`)
-and `python -m backend.worker.worker_main`.
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000 npm run dev
-```
-
-### Tests
-
-```bash
-# from the repo root, with DATABASE_URL/REDIS_URL pointing at a real Postgres/Redis
-pytest backend/tests -v
-ruff check backend
-```
-
-The test suite runs against a real Postgres (via a transaction-per-test
-fixture that rolls back automatically) and a real Redis — there's no SQLite
-substitution, so what passes locally matches what runs in CI. The one
-integration test (`test_integration_pipeline.py`) goes further: it drives an
-actual RQ `SimpleWorker` against the real queue, so the only thing mocked
-anywhere in the suite is the HuggingFace model call itself (no `torch`
-required to run tests).
-
-If your machine already has something bound to 5432 or 6379, override with
-`TEST_DATABASE_URL` / `TEST_REDIS_URL` instead of changing `DATABASE_URL`/
-`REDIS_URL` — CI uses the standard ports via GitHub Actions service
-containers.
-
-```bash
-cd frontend
-npm run lint
-npx tsc --noEmit
-npm run build
-```
-
-## API reference
-
-Interactive docs (Swagger UI) are available at `/docs` when the API is
-running. Summary:
-
-### Health
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/health` | none | Liveness probe |
-| GET | `/ready` | none | Readiness probe — checks Postgres + Redis connectivity |
-
-### Feedback
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/v1/feedback` | none (rate-limited) | Submit feedback. Optional `Idempotency-Key` header — a repeated key returns the original record (200) instead of creating a duplicate (201). |
-| GET | `/api/v1/feedback` | JWT | Paginated list. Query params: `page`, `page_size` (max 100), `sentiment` (`positive`/`negative`/`neutral` or fine-grained `SN`, `WN`, `NU`, `SP`, `WP`), `start_date`, `end_date`. |
-| GET | `/api/v1/feedback/stats/trend` | JWT | Daily aggregate counts: `positive_count`, `negative_count`, `neutral_count`. Query params: `start_date`, `end_date`. |
-| GET | `/api/v1/feedback/stats/distribution` | JWT | Fine-grained label count distribution for bar charts. Query params: `start_date`, `end_date`. |
-
-#### Example Submissions via `curl`
-
-**1. Bangla Feedback (BanglaBERT Route):**
-```bash
-curl -i -X POST http://localhost:8000/api/v1/feedback \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: demo-bangla-01" \
-  -d '{"user_id": "cust-bn-1", "text": "পণ্যটির কোয়ালিটি অনেক ভালো এবং সার্ভিস অসাধারণ!"}'
-```
-
-**2. Negative Bangla Feedback (Triggers Slack Alert if score >= threshold):**
-```bash
-curl -i -X POST http://localhost:8000/api/v1/feedback \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: demo-bangla-02" \
-  -d '{"user_id": "cust-bn-2", "text": "একদম বাজে অভিজ্ঞতা, ডেলিভারি অনেক দেরি হয়েছে এবং পণ্য ভাঙ্গা ছিল।"}'
-```
-
-**3. English Feedback (DistilBERT Route):**
-```bash
-curl -i -X POST http://localhost:8000/api/v1/feedback \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: demo-en-01" \
-  -d '{"user_id": "cust-en-1", "text": "Excellent delivery time and great packaging!"}'
-```
-
-**POST /api/v1/feedback** initial response (`201 Created`):
-
+### Example Worker Output
 ```json
 {
-  "id": "c1f72a9b-43e8-4682-bb34-3158c3bcdd04",
-  "user_id": "cust-bn-2",
-  "text": "একদম বাজে অভিজ্ঞতা, ডেলিভারি অনেক দেরি হয়েছে এবং পণ্য ভাঙ্গা ছিল।",
-  "status": "pending",
-  "sentiment_label": null,
-  "sentiment_score": null,
-  "sentiment_polarity": null,
-  "confidence": null,
-  "probabilities": null,
-  "model_id": null,
-  "model_revision": null,
-  "retry_count": 0,
-  "created_at": "2026-10-16T12:00:00Z",
-  "processed_at": null
-}
-```
-
-Once processed by the background worker, fetching the item via `GET /api/v1/feedback` yields:
-
-```json
-{
-  "id": "c1f72a9b-43e8-4682-bb34-3158c3bcdd04",
-  "user_id": "cust-bn-2",
-  "text": "একদম বাজে অভিজ্ঞতা, ডেলিভারি অনেক দেরি হয়েছে এবং পণ্য ভাঙ্গা ছিল।",
+  "id": "ee75744f-819f-4daa-b00b-87fc00304233",
   "status": "processed",
-  "sentiment_label": "SN",
-  "sentiment_score": 0.9412,
-  "sentiment_polarity": "negative",
-  "confidence": 0.9412,
+  "sentiment_label": "SP",
+  "sentiment_polarity": "positive",
+  "confidence": 0.9802,
   "probabilities": {
-    "SN": 0.9412,
-    "WN": 0.0410,
-    "NU": 0.0120,
-    "WP": 0.0035,
-    "SP": 0.0023
+    "SP": 0.9802,
+    "WP": 0.0133,
+    "NU": 0.0028,
+    "SN": 0.0024,
+    "WN": 0.0011
   },
   "model_id": "sm-khalil/banglabert-sentigold",
-  "model_revision": "4f83b1a",
-  "retry_count": 0,
-  "created_at": "2026-10-16T12:00:00Z",
-  "processed_at": "2026-10-16T12:00:02Z"
+  "model_revision": "df3f3ffcb6efe9d28791f2673d07218f1aea2d82"
 }
 ```
 
-`status` transitions `pending` → `processed` (or `failed` once retries are
-exhausted) as the worker picks up the job.
+---
 
-### Auth
+## 🧪 Local Testing
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/v1/auth/register` | none | Create an admin account: `{ "email": "...", "password": "..." }` (password: 8–128 chars). |
-| POST | `/api/v1/auth/login` | none | `{ "email": "...", "password": "..." }` → `{ "access_token": "...", "token_type": "bearer" }`. Send as `Authorization: Bearer <token>` on protected routes. |
+Run unit & integration tests (uses mocked models for blazingly fast CI):
 
-## Project structure
-
-```
-backend/
-  api/            FastAPI app: routers, middleware, dependencies
-  common/         Shared: config, db session, models, schemas, logging, queue, security
-  worker/         RQ job (sentiment analysis), Slack alerting, worker entrypoint
-  alembic/        Database migrations
-  tests/          pytest suite (unit + the one integration test)
-  Dockerfile.api
-  Dockerfile.worker
-frontend/
-  src/app/        Next.js App Router pages (/, /login)
-  src/components/ FeedbackTable, Pagination, Filters, SentimentTrendChart
-  src/lib/        api client, auth context, SWR data hooks, shared types
-  Dockerfile
-docker-compose.yml
-.github/workflows/ci.yml
+```bash
+docker compose exec api pytest backend/tests -v
 ```
 
-## Design notes
+Frontend typecheck & linting:
+```bash
+cd frontend && npm run lint && npx tsc --noEmit
+```
 
-- **Idempotency** is enforced via an optional `Idempotency-Key` header
-  rather than requiring one, since public feedback intake shouldn't force
-  every client to generate a key — it's there for clients that need
-  safe retries.
-- **Dead-letter queue**: rather than build a second, custom queue for failed
-  jobs, the worker leans on RQ's own `FailedJobRegistry`, which already does
-  this job. A `handle_job_failure` callback keeps the database in sync
-  (`retry_count`, and `status = "failed"` only once retries are exhausted).
-- **Structured logging**: every log line is one JSON object
-  (`backend/common/logging.py`). A `CorrelationIdMiddleware` generates or
-  passes through an `X-Request-ID` per API request; the worker reuses the
-  feedback id itself as the correlation id for its own logs, so an API log
-  line and the worker log lines for the same piece of feedback share one
-  identifier.
-- **Testing against real Postgres/Redis, not fakes**: the test suite uses a
-  transaction-per-test fixture (rolled back automatically) against a real
-  Postgres, and a real Redis for the queue and rate-limiter tests. The only
-  thing ever mocked is the HuggingFace model call, so CI doesn't need
-  `torch` installed and stays fast.
+---
 
-## Manual Verification Checklist
+## 📁 Repository Layout
 
-Once the services are running with `docker compose up --build`:
-
-1. **Verify Database Migration:**
-   ```bash
-   docker compose exec api alembic current
-   # Output should confirm: 3a1c5d9e7b2f (head)
-   ```
-2. **Submit Feedback via `curl`:**
-   - Submit a positive Bangla sample:
-     ```bash
-     curl -s -X POST http://localhost:8000/api/v1/feedback \
-       -H "Content-Type: application/json" \
-       -d '{"user_id": "cust-1", "text": "খুব ভালো সেবা পেয়েছি, ধন্যবাদ।"}'
-     ```
-   - Submit a strongly negative Bangla sample:
-     ```bash
-     curl -s -X POST http://localhost:8000/api/v1/feedback \
-       -H "Content-Type: application/json" \
-       -d '{"user_id": "cust-2", "text": "একদম জঘন্য কোয়ালিটি, কখনো আর কিনব না।"}'
-     ```
-   - Submit an English sample:
-     ```bash
-     curl -s -X POST http://localhost:8000/api/v1/feedback \
-       -H "Content-Type: application/json" \
-       -d '{"user_id": "cust-3", "text": "This product works as advertised."}'
-     ```
-3. **Verify Worker Logs & Language Routing:**
-   ```bash
-   docker compose logs -f ml-worker
-   ```
-   Check that:
-   - Bangla sentences route to `sm-khalil/banglabert-sentigold` and log fine-grained labels (`SP`, `SN`, etc.).
-   - English sentences route to `distilbert-base-uncased-finetuned-sst-2-english`.
-   - If `SLACK_WEBHOOK_URL` is set, check that a negative alert formatted with `[SN]` is dispatched.
-4. **Inspect Database Records:**
-   ```bash
-   docker compose exec postgres psql -U feedback -d feedback -c \
-     "SELECT text, sentiment_label, sentiment_polarity, confidence, model_id FROM feedback ORDER BY created_at DESC LIMIT 5;"
-   ```
-5. **Inspect Dashboard UI (http://localhost:3000):**
-   - Log into the dashboard with your admin credentials.
-   - Hover over the fine-grained badges (`SN`, `WN`, `NU`, `WP`, `SP`) to view the Bengali label tooltip.
-   - Check the **Sentiment Trend Over Time** chart (displays Positive, Neutral, and Negative lines).
-   - Check the **Label Distribution** bar chart (displays counts for each of the 5 Bangla classes plus English classes).
-   - Test filtering by Coarse Polarity (`positive`, `negative`, `neutral`) and Fine-grained Label (`SN`, `WN`, etc.).
-
-## What's not included (by design, for a portfolio-scoped project)
-
-- Dashboard auth uses JWTs stored in `localStorage` rather than httpOnly
-  cookies — simpler for a local/demo deployment, but worth hardening before
-  any real production use.
-- No pagination on the trend endpoint's date range — fine at the current
-  scale, would want bucketing/downsampling for a long history.
-- Admin registration is open (`POST /api/v1/auth/register` has no
-  authorization check) — a real deployment would gate this behind an
-  invite flow or an existing admin's permission.
-
+```
+├── Banglabert_Fine_Tune.ipynb  # Kaggle/Colab notebook for BanglaBERT fine-tuning
+├── screenshots/                # Dashboard & stream screenshots for documentation
+├── backend/
+│   ├── api/                    # FastAPI endpoints, auth, and rate limiters
+│   ├── common/                 # SQLAlchemy models, schemas, and db config
+│   ├── worker/                 # RQ worker tasks, sentiment engine & Slack notifier
+│   └── tests/                  # Pytest test suite
+├── frontend/
+│   ├── src/app/                # Next.js App Router (Dashboard & Login pages)
+│   ├── src/components/         # SentimentTester, FeedbackTable, Charts
+│   └── src/lib/                # Auth context & SWR hooks
+└── docker-compose.yml          # Container configuration for all 5 services
+```

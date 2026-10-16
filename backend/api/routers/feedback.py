@@ -2,7 +2,7 @@ import logging
 from datetime import date, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from rq import Queue
 from rq.job import Callback
 from sqlalchemy import case, func, or_
@@ -61,6 +61,7 @@ def submit_feedback(
     queue.enqueue(
         "backend.worker.tasks.process_feedback",
         str(feedback.id),
+        model_override=payload.model_override,
         retry=get_retry_policy(),
         on_failure=Callback("backend.worker.tasks.handle_job_failure"),
     )
@@ -72,6 +73,18 @@ def submit_feedback(
 
     response.status_code = status.HTTP_201_CREATED
     return feedback
+
+
+@router.get("/feedback/{feedback_id}", response_model=FeedbackResponse)
+def get_feedback(
+    feedback_id: str,
+    db: Annotated[Session, Depends(get_db)],
+    _current_user: Annotated[AdminUser, Depends(get_current_user)],
+) -> Feedback:
+    item = db.get(Feedback, feedback_id)
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feedback not found")
+    return item
 
 
 @router.get("/feedback", response_model=PaginatedFeedbackResponse)

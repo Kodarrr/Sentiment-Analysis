@@ -15,6 +15,8 @@ export interface Feedback {
   processed_at: string | null;
 }
 
+export type FeedbackItem = Feedback;
+
 export interface PaginatedFeedback {
   items: Feedback[];
   total: number;

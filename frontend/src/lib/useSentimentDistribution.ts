@@ -12,6 +12,7 @@ interface UseSentimentDistributionResult {
   data: SentimentDistribution | undefined;
   error: string | null;
   isLoading: boolean;
+  refetch: () => Promise<SentimentDistribution | undefined>;
 }
 
 export function useSentimentDistribution({
@@ -28,7 +29,7 @@ export function useSentimentDistribution({
     ? `/api/v1/feedback/stats/distribution${query ? `?${query}` : ""}`
     : null;
 
-  const { data, error, isLoading } = useSWR(key, (path: string) =>
+  const { data, error, isLoading, mutate } = useSWR(key, (path: string) =>
     apiFetch<SentimentDistribution>(path, {}, token),
   );
 
@@ -36,6 +37,7 @@ export function useSentimentDistribution({
     data,
     error: error instanceof Error ? error.message : error ? "Failed to load distribution" : null,
     isLoading,
+    refetch: () => mutate(),
   };
 }
 

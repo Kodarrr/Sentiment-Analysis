@@ -12,6 +12,7 @@ interface UseSentimentTrendResult {
   data: SentimentTrendPoint[] | undefined;
   error: string | null;
   isLoading: boolean;
+  refetch: () => Promise<SentimentTrendPoint[] | undefined>;
 }
 
 export function useSentimentTrend({
@@ -28,7 +29,7 @@ export function useSentimentTrend({
     ? `/api/v1/feedback/stats/trend${query ? `?${query}` : ""}`
     : null;
 
-  const { data, error, isLoading } = useSWR(key, (path: string) =>
+  const { data, error, isLoading, mutate } = useSWR(key, (path: string) =>
     apiFetch<SentimentTrendPoint[]>(path, {}, token),
   );
 
@@ -36,5 +37,6 @@ export function useSentimentTrend({
     data,
     error: error instanceof Error ? error.message : error ? "Failed to load sentiment trend" : null,
     isLoading,
+    refetch: () => mutate(),
   };
 }

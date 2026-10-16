@@ -9,6 +9,7 @@ interface AuthContextValue {
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -43,6 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function register(email: string, password: string) {
+    await apiFetch<{ id: string; email: string }>("/api/v1/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    await login(email, password);
+  }
+
   function logout() {
     setToken(null);
     try {
@@ -53,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ token, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ token, isLoading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -18,7 +18,7 @@ def _default_pipeline():
 _get_pipeline = _default_pipeline
 
 
-def analyze_sentiment_full(text: str) -> SentimentResult:
+def analyze_sentiment_full(text: str, engine_override: str | None = None) -> SentimentResult:
     """Invokes the full unified sentiment engine returning complete metadata."""
     if _get_pipeline is not _default_pipeline:
         result = _get_pipeline()(text, truncation=True)[0]
@@ -41,7 +41,7 @@ def analyze_sentiment_full(text: str) -> SentimentResult:
             model_revision=None,
             negative_polarity_score=score if polarity == "negative" else 0.0,
         )
-    return analyze_sentiment_engine(text)
+    return analyze_sentiment_engine(text, engine_override=engine_override)
 
 
 def analyze_sentiment(text: str) -> tuple[str, float]:

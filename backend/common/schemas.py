@@ -7,6 +7,10 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field
 class FeedbackCreate(BaseModel):
     user_id: str = Field(min_length=1, max_length=255)
     text: str = Field(min_length=1, max_length=5000)
+    model_override: str | None = Field(
+        default=None,
+        description="Optional model selector: 'auto', 'bangla', or 'distilbert'",
+    )
 
 
 class FeedbackResponse(BaseModel):

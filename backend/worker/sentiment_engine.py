@@ -245,19 +245,20 @@ class DistilBERTClassifier:
         )
 
 
-def analyze_sentiment(text: str) -> SentimentResult:
+def analyze_sentiment(text: str, engine_override: str | None = None) -> SentimentResult:
     """Main routing entrypoint.
 
     Selects between BanglaBERT and DistilBERT based on:
-    1. SENTIMENT_ENGINE config ('auto', 'bangla', 'distilbert').
-    2. Language detection (predominant Bangla script).
+    1. Explicit engine_override ('auto', 'bangla', 'distilbert').
+    2. SENTIMENT_ENGINE config ('auto', 'bangla', 'distilbert').
+    3. Language detection (predominant Bangla script).
     """
     settings = get_settings()
-    engine_mode = (settings.sentiment_engine or "auto").lower()
+    engine_mode = (engine_override or settings.sentiment_engine or "auto").lower()
 
-    if engine_mode == "bangla":
+    if engine_mode in ["bangla", "banglabert"]:
         use_bangla = True
-    elif engine_mode == "distilbert":
+    elif engine_mode in ["distilbert", "english", "en"]:
         use_bangla = False
     else:  # auto
         use_bangla = is_mostly_bangla(text)
