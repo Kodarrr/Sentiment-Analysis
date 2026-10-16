@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
 from rq import Queue
 from rq.job import Callback
-from sqlalchemy import case, func
+from sqlalchemy import case, func, or_
 from sqlalchemy.orm import Session
 
 from backend.api.dependencies import get_current_user
@@ -17,6 +17,7 @@ from backend.common.schemas import (
     FeedbackCreate,
     FeedbackResponse,
     PaginatedFeedbackResponse,
+    SentimentDistributionResponse,
     SentimentTrendPoint,
 )
 
@@ -85,7 +86,14 @@ def list_feedback(
 ) -> PaginatedFeedbackResponse:
     query = db.query(Feedback)
     if sentiment:
-        query = query.filter(Feedback.sentiment_label == sentiment.upper())
+        s_upper = sentiment.upper()
+        s_lower = sentiment.lower()
+        query = query.filter(
+            or_(
+                Feedback.sentiment_label == s_upper,
+                Feedback.sentiment_polarity == s_lower,
+            )
+        )
     if start_date:
         query = query.filter(Feedback.created_at >= start_date)
     if end_date:
@@ -112,8 +120,42 @@ def sentiment_trend(
     day = func.date(Feedback.created_at).label("day")
     query = db.query(
         day,
-        func.sum(case((Feedback.sentiment_label == "POSITIVE", 1), else_=0)).label("positive"),
-        func.sum(case((Feedback.sentiment_label == "NEGATIVE", 1), else_=0)).label("negative"),
+        func.sum(
+            case(
+                (
+                    or_(
+                        Feedback.sentiment_polarity == "positive",
+                        Feedback.sentiment_label == "POSITIVE",
+                    ),
+                    1,
+                ),
+                else_=0,
+            )
+        ).label("positive"),
+        func.sum(
+            case(
+                (
+                    or_(
+                        Feedback.sentiment_polarity == "negative",
+                        Feedback.sentiment_label == "NEGATIVE",
+                    ),
+                    1,
+                ),
+                else_=0,
+            )
+        ).label("negative"),
+        func.sum(
+            case(
+                (
+                    or_(
+                        Feedback.sentiment_polarity == "neutral",
+                        Feedback.sentiment_label == "NU",
+                    ),
+                    1,
+                ),
+                else_=0,
+            )
+        ).label("neutral"),
     )
     if start_date:
         query = query.filter(Feedback.created_at >= start_date)
@@ -123,6 +165,43 @@ def sentiment_trend(
     rows = query.group_by(day).order_by(day).all()
 
     return [
-        SentimentTrendPoint(date=row.day, positive_count=row.positive, negative_count=row.negative)
+        SentimentTrendPoint(
+            date=row.day,
+            positive_count=row.positive or 0,
+            negative_count=row.negative or 0,
+            neutral_count=row.neutral or 0,
+        )
         for row in rows
     ]
+
+
+@router.get("/feedback/stats/distribution", response_model=SentimentDistributionResponse)
+def sentiment_distribution(
+    db: Annotated[Session, Depends(get_db)],
+    _current_user: Annotated[AdminUser, Depends(get_current_user)],
+    start_date: Annotated[date | None, Query()] = None,
+    end_date: Annotated[date | None, Query()] = None,
+) -> SentimentDistributionResponse:
+    query = db.query(Feedback)
+    if start_date:
+        query = query.filter(Feedback.created_at >= start_date)
+    if end_date:
+        query = query.filter(Feedback.created_at < end_date + timedelta(days=1))
+
+    label_rows = (
+        query.with_entities(Feedback.sentiment_label, func.count(Feedback.id))
+        .group_by(Feedback.sentiment_label)
+        .all()
+    )
+    polarity_rows = (
+        query.with_entities(Feedback.sentiment_polarity, func.count(Feedback.id))
+        .group_by(Feedback.sentiment_polarity)
+        .all()
+    )
+
+    labels = {str(r[0]): int(r[1]) for r in label_rows if r[0]}
+    polarities = {str(r[0]): int(r[1]) for r in polarity_rows if r[0]}
+    total = query.count()
+
+    return SentimentDistributionResponse(labels=labels, polarities=polarities, total=total)
+
