@@ -25,6 +25,11 @@ class Settings(BaseSettings):
 
     sentiment_negative_threshold: float = 0.85
     model_name: str = "distilbert-base-uncased-finetuned-sst-2-english"
+    bangla_model_id: str = "sm-khalil/banglabert-sentigold"
+    hf_token: str = ""
+    hf_home: str = "/app/.cache/huggingface"
+    sentiment_engine: str = "auto"
+    confidence_threshold: float = 0.65
     max_retries: int = 3
     retry_backoff_base_seconds: int = 10
 

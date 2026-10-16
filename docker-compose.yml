@@ -46,6 +46,8 @@ services:
       context: .
       dockerfile: backend/Dockerfile.worker
     env_file: .env
+    environment:
+      HF_HOME: ${HF_HOME:-/app/.cache/huggingface}
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,6 +55,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app/backend
+      - hf_cache:/app/.cache/huggingface
 
   frontend:
     build:
@@ -67,3 +70,5 @@ services:
 
 volumes:
   postgres_data:
+  hf_cache:
+
