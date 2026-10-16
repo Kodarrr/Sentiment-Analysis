@@ -26,8 +26,18 @@ export function Filters({ value, onChange }: FiltersProps) {
           className={inputClasses}
         >
           <option value="">All</option>
-          <option value="POSITIVE">Positive</option>
-          <option value="NEGATIVE">Negative</option>
+          <optgroup label="Coarse Polarity">
+            <option value="positive">Positive (All)</option>
+            <option value="neutral">Neutral (All)</option>
+            <option value="negative">Negative (All)</option>
+          </optgroup>
+          <optgroup label="Bangla 5-Classes">
+            <option value="SP">Strongly Positive (SP)</option>
+            <option value="WP">Weakly Positive (WP)</option>
+            <option value="NU">Neutral (NU)</option>
+            <option value="WN">Weakly Negative (WN)</option>
+            <option value="SN">Strongly Negative (SN)</option>
+          </optgroup>
         </select>
       </div>
 

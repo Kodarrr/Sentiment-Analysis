@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useFeedbackList } from "@/lib/useFeedbackList";
 import { useSentimentTrend } from "@/lib/useSentimentTrend";
+import { useSentimentDistribution } from "@/lib/useSentimentDistribution";
 import { FeedbackTable } from "@/components/FeedbackTable";
 import { Pagination } from "@/components/Pagination";
 import { SentimentTrendChart } from "@/components/SentimentTrendChart";
+import { LabelDistributionChart } from "@/components/LabelDistributionChart";
 import { Filters, type FiltersValue } from "@/components/Filters";
 
 const PAGE_SIZE = 20;
@@ -42,6 +44,11 @@ export default function DashboardPage() {
     startDate: filters.startDate || undefined,
     endDate: filters.endDate || undefined,
   });
+  const { data: distribution, error: distError } = useSentimentDistribution({
+    token,
+    startDate: filters.startDate || undefined,
+    endDate: filters.endDate || undefined,
+  });
 
   function handleFiltersChange(next: FiltersValue) {
     setFilters(next);
@@ -69,19 +76,28 @@ export default function DashboardPage() {
       </header>
 
       <div className="flex-1 space-y-4 p-6">
-        {(error || trendError) && (
+        {(error || trendError || distError) && (
           <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-            {error ?? trendError}
+            {error ?? trendError ?? distError}
           </p>
         )}
 
         <Filters value={filters} onChange={handleFiltersChange} />
 
-        <div className="rounded-lg border border-black/10 dark:border-white/10">
-          <h2 className="border-b border-black/10 px-4 py-2 text-sm font-medium dark:border-white/10">
-            Sentiment trend
-          </h2>
-          <SentimentTrendChart data={trend ?? []} />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="rounded-lg border border-black/10 dark:border-white/10">
+            <h2 className="border-b border-black/10 px-4 py-2 text-sm font-medium dark:border-white/10">
+              Sentiment Polarity Trend
+            </h2>
+            <SentimentTrendChart data={trend ?? []} />
+          </div>
+
+          <div className="rounded-lg border border-black/10 dark:border-white/10">
+            <h2 className="border-b border-black/10 px-4 py-2 text-sm font-medium dark:border-white/10">
+              Sentiment Label Distribution (5-Class & EN)
+            </h2>
+            <LabelDistributionChart distribution={distribution} />
+          </div>
         </div>
 
         {isFeedbackLoading && !data ? (

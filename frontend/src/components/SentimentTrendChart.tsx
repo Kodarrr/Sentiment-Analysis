@@ -15,8 +15,9 @@ import type { SentimentTrendPoint } from "@/lib/types";
 // Fixed status colors (not categorical): POSITIVE maps to "good", NEGATIVE to
 // "critical" - these are mode-invariant by design, so no separate dark values.
 const COLORS = {
-  positive: "#0ca30c",
-  negative: "#d03b3b",
+  positive: "#10b981",
+  neutral: "#71717a",
+  negative: "#ef4444",
   grid: "#8a8a86",
   text: "#71717a",
 };
@@ -58,6 +59,15 @@ export function SentimentTrendChart({ data }: { data: SentimentTrendPoint[] }) {
             name="Positive"
             stroke={COLORS.positive}
             strokeWidth={2}
+            dot={{ r: 3 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="neutral_count"
+            name="Neutral"
+            stroke={COLORS.neutral}
+            strokeWidth={2}
+            strokeDasharray="3 3"
             dot={{ r: 3 }}
           />
           <Line
