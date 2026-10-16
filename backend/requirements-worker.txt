@@ -1,5 +1,6 @@
 -r requirements-common.txt
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.4.1+cpu
 transformers==4.44.2
-torch==2.4.1
 requests==2.32.3
-git+https://github.com/csebuetnlp/normalizer@master
+git+https://github.com/csebuetnlp/normalizer@main
