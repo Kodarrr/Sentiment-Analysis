@@ -6,3 +6,5 @@ frontend/.next
 **/*.pyc
 .pytest_cache
 .env
+.cache
+*.log

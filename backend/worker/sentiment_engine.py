@@ -17,18 +17,20 @@ from typing import Any
 
 from backend.common.config import get_settings
 
+import re
+
 logger = logging.getLogger(__name__)
 
-# Safe import of csebuetnlp normalizer (graceful fallback if not installed)
-try:
-    from normalizer import normalize as csebuetnlp_normalize
-except ImportError:
-    try:
-        from csebuetnlp_normalizer import normalize as csebuetnlp_normalize  # type: ignore[no-redef]
-    except ImportError:
 
-        def csebuetnlp_normalize(text: str) -> str:
-            return text
+def clean_bangla_text(text: str) -> str:
+    """Normalize whitespace and clean Bengali input text."""
+    if not isinstance(text, str):
+        return ""
+    return re.sub(r"\s+", " ", text).strip()
+
+
+# Backward-compatible alias
+csebuetnlp_normalize = clean_bangla_text
 
 
 # Expected SentiGOLD labels:
@@ -141,8 +143,8 @@ class BanglaBERTClassifier:
     def predict(self, text: str) -> SentimentResult:
         import torch
 
-        # Step 1: Preprocessing with csebuetnlp normalizer
-        cleaned_text = csebuetnlp_normalize(text)
+        # Step 1: Preprocessing
+        cleaned_text = clean_bangla_text(text)
 
         # Step 2: Tokenization with truncation max_length=128
         inputs = self.tokenizer(
