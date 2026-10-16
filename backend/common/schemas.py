@@ -10,7 +10,7 @@ class FeedbackCreate(BaseModel):
 
 
 class FeedbackResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, protected_namespaces=())
 
     id: uuid.UUID
     user_id: str

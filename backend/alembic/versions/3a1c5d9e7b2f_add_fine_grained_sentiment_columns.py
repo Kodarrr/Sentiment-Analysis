@@ -32,3 +32,4 @@ def downgrade() -> None:
     op.drop_column('feedback', 'probabilities')
     op.drop_column('feedback', 'confidence')
     op.drop_column('feedback', 'sentiment_polarity')
+

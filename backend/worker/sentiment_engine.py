@@ -263,3 +263,4 @@ def analyze_sentiment(text: str) -> SentimentResult:
     if use_bangla:
         return BanglaBERTClassifier.get_instance().predict(text)
     return DistilBERTClassifier.get_instance().predict(text)
+

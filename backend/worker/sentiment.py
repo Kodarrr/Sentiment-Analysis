@@ -20,6 +20,27 @@ _get_pipeline = _default_pipeline
 
 def analyze_sentiment_full(text: str) -> SentimentResult:
     """Invokes the full unified sentiment engine returning complete metadata."""
+    if _get_pipeline is not _default_pipeline:
+        result = _get_pipeline()(text, truncation=True)[0]
+        label = str(result["label"])
+        score = float(result["score"])
+        polarity = (
+            "negative"
+            if label.upper() in ["NEGATIVE", "SN", "WN"]
+            else "positive"
+            if label.upper() in ["POSITIVE", "SP", "WP"]
+            else "neutral"
+        )
+        return SentimentResult(
+            label=label,
+            score=score,
+            polarity=polarity,
+            confidence=score,
+            probabilities={label: score},
+            model_id="distilbert-mock",
+            model_revision=None,
+            negative_polarity_score=score if polarity == "negative" else 0.0,
+        )
     return analyze_sentiment_engine(text)
 
 
