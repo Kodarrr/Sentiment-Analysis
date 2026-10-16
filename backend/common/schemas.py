@@ -16,11 +16,16 @@ class FeedbackResponse(BaseModel):
     user_id: str
     text: str
     status: str
-    sentiment_label: str | None
-    sentiment_score: float | None
+    sentiment_label: str | None = None
+    sentiment_score: float | None = None
+    sentiment_polarity: str | None = None
+    confidence: float | None = None
+    probabilities: dict[str, float] | None = None
+    model_id: str | None = None
+    model_revision: str | None = None
     retry_count: int
     created_at: datetime
-    processed_at: datetime | None
+    processed_at: datetime | None = None
 
 
 class PaginatedFeedbackResponse(BaseModel):
@@ -34,6 +39,14 @@ class SentimentTrendPoint(BaseModel):
     date: date
     positive_count: int
     negative_count: int
+    neutral_count: int = 0
+
+
+class SentimentDistributionResponse(BaseModel):
+    labels: dict[str, int]
+    polarities: dict[str, int]
+    total: int
+
 
 
 class AdminUserCreate(BaseModel):

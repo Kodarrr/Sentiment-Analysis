@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, Integer, String, Text, func
+from sqlalchemy import JSON, DateTime, Float, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -23,6 +23,11 @@ class Feedback(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     sentiment_label: Mapped[str | None] = mapped_column(String(20), nullable=True)
     sentiment_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sentiment_polarity: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    probabilities: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    model_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    model_revision: Mapped[str | None] = mapped_column(String(255), nullable=True)
     retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     created_at: Mapped[datetime] = mapped_column(
