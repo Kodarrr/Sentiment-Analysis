@@ -5,7 +5,7 @@ from backend.common.config import get_settings
 from backend.common.db import SessionLocal
 from backend.common.logging import correlation_id_var
 from backend.common.models import Feedback
-from backend.worker.sentiment import analyze_sentiment
+from backend.worker.sentiment import analyze_sentiment_full
 from backend.worker.slack import send_negative_feedback_alert
 
 logger = logging.getLogger(__name__)
@@ -20,22 +20,43 @@ def process_feedback(feedback_id: str) -> None:
             logger.warning("feedback not found", extra={"feedback_id": feedback_id})
             return
 
-        label, score = analyze_sentiment(feedback.text)
+        result = analyze_sentiment_full(feedback.text)
 
-        feedback.sentiment_label = label
-        feedback.sentiment_score = score
+        feedback.sentiment_label = result.label
+        feedback.sentiment_score = result.score
+        feedback.sentiment_polarity = result.polarity
+        feedback.confidence = result.confidence
+        feedback.probabilities = result.probabilities
+        feedback.model_id = result.model_id
+        feedback.model_revision = result.model_revision
         feedback.status = "processed"
         feedback.processed_at = datetime.now(timezone.utc)
         db.commit()
 
         logger.info(
             "feedback processed",
-            extra={"feedback_id": feedback_id, "sentiment_label": label, "sentiment_score": score},
+            extra={
+                "feedback_id": feedback_id,
+                "sentiment_label": result.label,
+                "sentiment_polarity": result.polarity,
+                "confidence": result.confidence,
+                "model_id": result.model_id,
+            },
         )
 
-        threshold = get_settings().sentiment_negative_threshold
-        if label == "NEGATIVE" and score >= threshold:
-            send_negative_feedback_alert(feedback_id, feedback.user_id, feedback.text, score)
+        settings = get_settings()
+        # Support both top-class confidence and aggregated negative polarity probability
+        effective_negative_score = max(result.confidence, result.negative_polarity_score)
+        threshold = settings.confidence_threshold or settings.sentiment_negative_threshold
+
+        if result.polarity == "negative" and effective_negative_score >= threshold:
+            send_negative_feedback_alert(
+                feedback_id=feedback_id,
+                user_id=feedback.user_id,
+                text=feedback.text,
+                score=effective_negative_score,
+                fine_label=result.label,
+            )
     finally:
         db.close()
         correlation_id_var.reset(token)
