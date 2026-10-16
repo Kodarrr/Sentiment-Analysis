@@ -35,7 +35,7 @@ Fine-tuning BanglaBERT yields a **+27.6% accuracy boost** and **+27.5% macro-F1 
 
 ### 3. Class-Level Performance Breakdown
 
-| Label | Bengali Description | Precision | Recall | F1-Score | Support |
+| Label | Bengali Description |/home/hamim/Downloads/Banglabert_Fine_Tune.ipynbk Precision | Recall | F1-Score | Support |
 |---|---|:---:|:---:|:---:|:---:|
 | **`SP`** | Strongly Positive (গাঢ় ইতিবাচক) | **0.721** | **0.763** | **0.741** | 1,532 |
 | **`SN`** | Strongly Negative (গাঢ় নেতিবাচক) | **0.704** | **0.720** | **0.712** | 1,376 |
@@ -50,23 +50,29 @@ Fine-tuning BanglaBERT yields a **+27.6% accuracy boost** and **+27.5% macro-F1 
 ### 1. Live Sentiment Sandbox & Model Selector
 Test real-time predictions with pre-built Bengali and English example chips, or manually pick the evaluation engine via the **Judge Model** dropdown:
 
-![Live Sentiment Sandbox](screenshots/sandbox-tester.png)
+<p align="center">
+  <img src="docs/images/sandbox.png" alt="Live Sentiment Sandbox" width="100%" />
+</p>
 
 ### 2. Customer Feedback Stream
 Live streaming intake table showing fine-grained class badges (`SP`, `WN`, `SN`, `NU`), confidence percentages, model provenance (🇧🇩 BanglaBERT vs 🇬🇧 DistilBERT), and worker processing states:
 
-![Customer Feedback Stream](screenshots/feedback-stream.png)
+<p align="center">
+  <img src="docs/images/feedback.png" alt="Customer Feedback Stream" width="100%" />
+</p>
 
 ### 3. Real-Time Sentiment Analytics
 Daily polarity trends (Positive vs Neutral vs Negative) alongside 5-class distribution histograms:
 
-![Sentiment Analytics](screenshots/analytics-charts.png)
+<p align="center">
+  <img src="docs/images/analytics.png" alt="Sentiment Analytics" width="100%" />
+</p>
 
 ### 4. Admin Auth & One-Click Login
 JWT-authenticated admin portal with quick sign-up and auto-fill credentials:
 
 <p align="center">
-  <img src="screenshots/auth-modal.png" width="400" alt="Admin Authentication Modal" />
+  <img src="docs/images/auth.png" alt="Admin Authentication Modal" width="450" />
 </p>
 
 ---
